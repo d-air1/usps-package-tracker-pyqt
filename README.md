@@ -7,3 +7,5 @@ An basic bare-bones Qt app that scrapes information from the USPS website after 
 After cloning this repo<br><br>
 pip install --user pyinstaller<br>
 pyinstaller usps-pyqt
+<br><br>
+The binary will be named usps-pyqt and will be located in the dist folder.
