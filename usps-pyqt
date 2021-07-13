@@ -1,0 +1,103 @@
+#webscraper stuff
+from bs4 import BeautifulSoup
+import requests as req
+import sys
+
+#qt stuff
+from PyQt5 import QtWidgets
+from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import QApplication, QMainWindow
+
+class windowApp(QMainWindow):
+    #initialize the window
+    def __init__(self):
+        super(windowApp, self).__init__()
+        self.setGeometry(200,200,800,600)
+        self.setWindowTitle("Track Package")
+        self.initUI()
+
+    def initUI(self):
+        ###Ultimately Just Gui Setup###
+        #text input for the tracking number
+        self.tnumber_field = QtWidgets.QLineEdit(self)
+        self.tnumber_field.move(350, 150)
+        self.tnumber_field.resize(170,35)
+
+        #Button for the Tracking Number
+        self.tnumB = QtWidgets.QPushButton(self)
+        self.tnumB.setText("Track")
+        self.tnumB.move(370, 400)
+        self.tnumB.clicked.connect(self.tnumB_clicked)
+
+        #Label to Display Text
+        self.info = QtWidgets.QLabel(self)
+        #self.info.setText("Temp")
+        self.info.move(350, 200)
+
+    
+    def tnumB_clicked(self):
+        info = self.fetch_info(self.tnumber_field.text())
+        self.info.setText(info)
+        self.update()
+    
+    def update(self):
+        self.info.adjustSize()
+
+    def fetch_info(self, tnum):
+        # flag for validation
+        ok = True
+
+        trackNum = tnum
+
+        # usps tracking action /go/TrackConfirmAction
+        scrape_url = "https://tools.usps.com/go/TrackConfirmAction_input"
+
+        # test num 9400109699937893440699
+
+        # query to send with get request
+        query = {
+            'tRef': 'fullpage',
+            'tLc': '2',
+            'text28777': '',
+            'tLabels': str(trackNum)
+        }
+
+        # go to usps website and grab data from query
+        with req.Session() as session:
+            try:
+                # max number of redirects to allow
+                session.max_redirects = 5
+                # cause some websites are picky about your device
+                session.headers.update({
+                    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.120 Safari/537.36',
+                    'Referer': 'https://tools.usps.com/go/TrackConfirmAction_input'})
+                response = session.get(scrape_url, params=query)
+            except Exception as ex:
+                print(ex)
+
+        # extract data
+        soup = BeautifulSoup(response.text, features='lxml')
+
+        # the info we want
+        info = soup.find('div', {"class": "status_feed"})
+
+        extracted = info.text
+        good = extracted.split("Get")
+
+        good = good[0].strip('\n')
+        clean = good.split('\n')
+        clean[1] = clean[1].strip()
+        good = '\n'.join(clean)
+        return good
+
+
+def window():
+    #basic setup for qt apps
+    app=QApplication(sys.argv)
+    window = windowApp()
+
+    #close window when exited
+    window.show()
+    sys.exit(app.exec_())
+
+window()
